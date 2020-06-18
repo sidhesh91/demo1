@@ -1,20 +1,29 @@
 pipeline {
     agent any 
     stages {
-        stage('Build') { 
+        stage('Prepare environment') { 
             steps {
-               echo " build step"
+               echo " creating vm on azure=============>"
+               sh 'sleep 10'
             }
         }
-        stage('Test') { 
+        stage('Deploy Database') { 
             steps {
-                echo "test step"
+                echo "Creating database===============>"
+                sh 'sleep 10'
             }
         }
-        stage('Deploy') { 
+        stage('Deploy system') { 
+            steps {
+                echo "Deploy step"
+                sh ' sleep 1o=0'
+            }
+            
+         stage('Deploy package') { 
             steps {
                 echo "Deploy step"
             }
+        }
         }
     }
 }
