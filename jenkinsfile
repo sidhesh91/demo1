@@ -3,7 +3,7 @@ pipeline {
     stages {
          stage('Send notification') { 
             steps {
-             mail bcc: '', body: 'Build started', cc: '', from: 'sidhesh@jenkinsdemo.com', replyTo: '', subject: 'devopsdemo', to: 'sidhesh91@gmail.com'
+            echo "buid staring"
             }
         }
         stage('Prepare environment') { 
