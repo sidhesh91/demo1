@@ -3,7 +3,11 @@ pipeline {
     stages {
          stage('Send notification') { 
             steps {
-            echo "buid staring"
+          emailext (
+      subject: subject,
+      body: details,
+      recipientProviders: [[$class: 'sidhesh91@gmail.com']]
+    )
             }
         }
         stage('Prepare environment') { 
