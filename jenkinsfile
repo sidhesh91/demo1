@@ -1,6 +1,12 @@
 pipeline {
     agent any 
     stages {
+         stage('Send notification') { 
+            steps {
+               echo " Build started=============>"
+               sh 'sleep 10'
+            }
+        }
         stage('Prepare environment') { 
             steps {
                echo " creating vm on azure=============>"
@@ -22,6 +28,7 @@ pipeline {
          stage('Deploy package') { 
             steps {
                 echo "Deploy step"
+                sh 'sleep 10'
             }
         }
         }
