@@ -16,7 +16,7 @@ pipeline {
         stage('Deploy system') { 
             steps {
                 echo "Deploy step"
-                sh ' sleep 1o=0'
+                sh ' sleep 10'
             }
             
          stage('Deploy package') { 
