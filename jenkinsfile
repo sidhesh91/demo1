@@ -15,28 +15,48 @@ pipeline {
         }
             }
         }
-        stage('Prepare environment') { 
+        stage('Build source code ') { 
             steps {
-               echo " creating vm on azure=============>"
-               sh 'sleep 10'
+               echo " Build source code"
+               sh 'sleep 15'
             }
         }
-        stage('Deploy Database') { 
+        stage('Static code analysis') { 
             steps {
-                echo "Creating database===============>"
-                sh 'sleep 10'
+                echo "RUn soarqube===============>"
+                sh 'sleep 15'
             }
         }
-        stage('Deploy system') { 
+        
+        stage('Send Test resulsts') { 
+            steps {
+                echo "Send test results===============>"
+                sh 'sleep 15'
+            }
+        }
+        stage('Test source code ') { 
             steps {
                 echo "Deploy step"
-                sh ' sleep 10'
+                sh ' sleep 15'
             }
             }
-         stage('Deploy package') { 
+         stage('Prepare Testing environment') { 
             steps {
-                echo "Deploy step"
-                sh 'sleep 10'
+                echo "Create VM================>"
+                sh 'sleep 15'
+            }
+            }
+             stage('Deploy code on Dev') { 
+            steps {
+                echo "Deploy step========================>"
+                sh 'sleep 15'
+            }
+            }
+            
+            stage('Send Notification') { 
+            steps {
+                echo "Send feedback==================>"
+                sh 'sleep 15'
             }
         }
         }
