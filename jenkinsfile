@@ -4,7 +4,7 @@ pipeline {
          stage('Send notification') { 
             steps {
       script {
-            def mailRecipients = 'sidhesh91@gmail.com,shirmukherjee1@gmail.com,sunilskp24@gmail.com'
+            def mailRecipients = 'sidhesh91@gmail.com,shirmukherjee1@gmail.com,sunilskp24@gmail.com,sidhesh2801@gmail.com'
             def jobName = currentBuild.fullDisplayName
             emailext body: '''${SCRIPT, template="groovy-html.template"}''',
             mimeType: 'text/html',
