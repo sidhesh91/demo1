@@ -1,0 +1,44 @@
+pipeline {
+    agent any 
+    stages {
+         stage('Send notification') { 
+            steps {
+      script {
+            def mailRecipients = 'sidhesh91@gmail.com,shirmukherjee1@gmail.com,sunilskp24@gmail.com'
+            def jobName = currentBuild.fullDisplayName
+            emailext body: '''${SCRIPT, template="groovy-html.template"}''',
+            mimeType: 'text/html',
+            subject: "[Jenkins] ${jobName}",
+            to: "${mailRecipients}",
+            replyTo: "${mailRecipients}",
+            recipientProviders: [[$class: 'CulpritsRecipientProvider']]
+        }
+            }
+        }
+        stage('Prepare environment') { 
+            steps {
+               echo " creating vm on azure=============>"
+               sh 'sleep 10'
+            }
+        }
+        stage('Deploy Database') { 
+            steps {
+                echo "Creating database===============>"
+                sh 'sleep 10'
+            }
+        }
+        stage('Deploy system') { 
+            steps {
+                echo "Deploy step"
+                sh ' sleep 10'
+            }
+            }
+         stage('Deploy package') { 
+            steps {
+                echo "Deploy step"
+                sh 'sleep 10'
+            }
+        }
+        }
+    }
+
