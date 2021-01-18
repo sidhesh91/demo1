@@ -21,6 +21,16 @@ pipeline {
 			
         }
 		
+	stage(execute batch)
+	{
+	 steps{
+	 
+	 bat 'start cmd.exe /c C:\Users\a\Desktop\Devops\\first.bat'
+	 
+	
+	
+	
+	}
 		
 		stage("choice example") {
             steps {
