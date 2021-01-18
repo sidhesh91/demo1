@@ -40,7 +40,7 @@ pipeline {
 		stage("choice example") {
             steps {
                 script {
-	       def list = readFile("result.txt").readLines()
+	       def list = readFile("op.txt").readLines()
                     env.RELEASE_SCOPE = input message: 'User input required', ok: 'Release!',
                             parameters: [choice(name: "RELEASE_SCOPE", choices: "image name\n${list} ", description: "What is the release scope?")]
                 }
