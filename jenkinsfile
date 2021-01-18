@@ -32,7 +32,7 @@ pipeline {
 	stage('execute batch'){
 	 steps{
 	
-	bat 'dir C:\WINDOWS\system32\config\systemprofile\AppData\Local\Jenkins\.jenkins\workspace\dynamic parameter job'
+	bat ' type result.txt'
 	}
 	}
 		stage("choice example") {
