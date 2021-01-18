@@ -43,9 +43,9 @@ pipeline {
 	      // def list = readFile("op.txt").readLines()
 	       env.LIST = readFile (file: "op.txt")
                     env.RELEASE_SCOPE = input message: 'User input required', ok: 'Release!',
-                            parameters: [choice(name: "RELEASE_SCOPE", choices: "image name\n${env.LIST} ", description: "What is the release scope?")]
+                            parameters: [choice(name: "RELEASE_SCOPE", choices: "image name\n${env.LIST} ", description: "which image to select")]
                 }
-                echo "${env.RELEASE_SCOPE}"
+                echo "image selected -->${env.RELEASE_SCOPE}"
             }
         }
     }
