@@ -1,6 +1,6 @@
 
 def var1= "image1"
-dev var2= "image2"
+def var2= "image2"
 
 pipeline {
     agent any
