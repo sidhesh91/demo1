@@ -1,3 +1,7 @@
+
+def var1= "image1"
+dev var2= "image2"
+
 pipeline {
     agent any
     parameters {
@@ -39,7 +43,7 @@ pipeline {
             steps {
                 script {
                     env.RELEASE_SCOPE = input message: 'User input required', ok: 'Release!',
-                            parameters: [choice(name: 'RELEASE_SCOPE', choices: 'patch\nminor\nmajor', description: 'What is the release scope?')]
+                            parameters: [choice(name: 'RELEASE_SCOPE', choices: 'patch\n"${var1}"\n"${var2}" ', description: 'What is the release scope?')]
                 }
                 echo "${env.RELEASE_SCOPE}"
             }
