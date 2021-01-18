@@ -16,7 +16,7 @@ pipeline {
     stages {
         stage('Example') {
             steps {
-                echo 'Hello World'
+               bat 'dir C:\WINDOWS\system32\config\systemprofile\AppData\Local\Jenkins\.jenkins\workspace\dynamic parameter job'
             }
 			
         }
