@@ -29,7 +29,7 @@ pipeline {
 			
 		
 	}
-	stage('execute batch'){
+	stage('execute batch1'){
 	 steps{
 	
 	bat ' type result.txt'
