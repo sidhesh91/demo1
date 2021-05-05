@@ -1,13 +1,13 @@
-<mxfile host="app.diagrams.net" modified="2021-05-05T04:10:26.388Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36" etag="EhdmLOFh3oPlDKAADp2B" version="14.6.0" type="github">
+<mxfile host="app.diagrams.net" modified="2021-05-05T04:19:00.973Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36" etag="7cukqSJu9lLme0wmfguR" version="14.6.0" type="github">
   <diagram id="VKaJbR31jsxkiZNYTzbu" name="Page-1">
     <mxGraphModel dx="878" dy="450" grid="1" gridSize="10" guides="0" tooltips="1" connect="0" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="1maaU_qKoWSlYGOiRlm9-1" value="create&amp;nbsp; a git repo on local" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="1maaU_qKoWSlYGOiRlm9-1" value="create a git rep on azure" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
           <mxGeometry x="370" y="20" width="210" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="1maaU_qKoWSlYGOiRlm9-9" value="push local repo to azure devops" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="1maaU_qKoWSlYGOiRlm9-9" value="clone git repo on local" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
           <mxGeometry x="370" y="60" width="210" height="40" as="geometry" />
         </mxCell>
         <mxCell id="1maaU_qKoWSlYGOiRlm9-13" value="create a react app project" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
@@ -18,6 +18,9 @@
         </mxCell>
         <mxCell id="1maaU_qKoWSlYGOiRlm9-15" value="create azure webapp" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
           <mxGeometry x="370" y="180" width="210" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="1maaU_qKoWSlYGOiRlm9-16" value="create azure webapp" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="370" y="220" width="210" height="40" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
