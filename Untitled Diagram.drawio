@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2021-05-05T08:28:50.272Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36" etag="frZvLmOdva6FyaQjXFAt" version="14.6.10" type="github">
+<mxfile host="app.diagrams.net" modified="2021-05-05T08:29:12.387Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36" etag="k9jxwNGrGE_akUMLlt69" version="14.6.10" type="github">
   <diagram id="NxdACNmFoD3Xdb2OtKcL" name="Page-1">
     <mxGraphModel dx="868" dy="450" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
       <root>
@@ -92,10 +92,10 @@
           <mxGeometry x="290" y="1180" width="260" height="30" as="geometry" />
         </mxCell>
         <mxCell id="2LHFZdpEcFpml1XUHQaW-18" value="create release pipeline" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="290" y="1200" width="260" height="30" as="geometry" />
+          <mxGeometry x="290" y="1210" width="260" height="40" as="geometry" />
         </mxCell>
         <mxCell id="2LHFZdpEcFpml1XUHQaW-19" value="deploy&amp;nbsp; build to azurewebapp" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="290" y="1230" width="260" height="30" as="geometry" />
+          <mxGeometry x="290" y="1250" width="260" height="30" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
