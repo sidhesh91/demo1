@@ -1,0 +1,3379 @@
+#### Stages ####
+stages:
+  - build
+  - test
+  - deploy
+  - cleanup
+
+pre_check:
+  stage: build
+  variables:
+    GIT_SUBMODULE_STRATEGY: normal
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/pre_check.sh
+    - ./scripts/testcases/instctl_files_check.sh
+  except:
+    - schedules
+    - master
+    - merge_requests
+
+ws_start:
+  stage: build
+  tags:
+    - dev_runner_tag
+  script:
+    - echo "Starting Tests"
+  except:
+
+ws_stop:
+  stage: cleanup
+  tags:
+    - dev_runner_tag
+  script:
+    - echo "cleaning Up temporary git directory"
+    - rm -rf *
+  when: always
+  except:
+
+#### Rollout Script ####
+
+master-rollout:
+  stage: deploy
+  variables:
+    GIT_SUBMODULE_STRATEGY: normal
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/rollout_2_master.sh
+  except:
+    - schedules
+  only:
+    - master
+
+rollout_2_master_of_desaster:
+  stage: deploy
+  variables:
+    GIT_SUBMODULE_STRATEGY: normal
+  tags:
+    - prd_runner_tag
+  script:
+    -  ./scripts/testcases/rollout_2_productive_salt_master.sh
+  only:
+    refs:
+      - master
+      - schedules
+    variables:
+      - $ROLLOUT =~ /toProd/
+
+update_saltenv:
+  stage: build
+  tags:
+    - dev_runner_tag
+  script:
+    - /opt/salt/env/bin/salt-run fileserver.update
+  except:
+    - master
+    - schedules
+
+############################################## Sonarqube Scan ############################################
+sonarqube_scan:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - git checkout master
+    - git fetch --unshallow
+    - /opt/salt/scripts/sonar-scanner-4.6.2.2472-linux/bin/sonar-scanner -Dsonar.login=ffb6ed761b01d1b0ef88090d9e2326168885ff97
+  except:
+    refs:
+      - schedules
+  only:
+    - master
+
+
+############################################## Integration Test ############################################
+
+syb_skeleton_single_host_aws:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_skel_single tib0301
+  except:
+    refs:
+      - master
+      - schedules
+    variables:
+      - $CI_COMMIT_TITLE =~ /.*NOTEST.*/
+
+#syb_skeleton_single_host_otc:
+#  stage: test
+#  tags:
+#    - dev_runner_tag
+#  script:
+#    -  ./scripts/testcases/test.sh syb_skel_single tu10101
+#  except:
+#    refs:
+#      - master
+#      - schedules
+#    variables:
+#      - $CI_COMMIT_TITLE =~ /.*NOTEST.*/
+
+syb_skeleton_single_host_azure:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_skel_single azt9797
+  except:
+    refs:
+      - master
+      - schedules
+    variables:
+      - $CI_COMMIT_TITLE =~ /.*NOTEST.*/
+
+
+#syb_skeleton_single_host_gcp:
+#  stage: test
+#  tags:
+#    - dev_runner_tag
+#  script:
+#    -  ./scripts/testcases/test.sh syb_skel_single gcp0501
+#  except:
+#    refs:
+#      - master
+#      - schedules
+#    variables:
+#      - $CI_COMMIT_TITLE =~ /.*NOTEST.*/
+
+#syb_skeleton_single_host_fci:
+#  stage: test
+#  tags:
+#    - dev_runner_tag
+#  script:
+#    -  ./scripts/testcases/test.sh syb_skel_single fci0401
+#  except:
+#    refs:
+#      - master
+#      - schedules
+#    variables:
+#      - $CI_COMMIT_TITLE =~ /.*NOTEST.*/
+
+ora_skel_single_host_azure:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh ora_skel_single azt9797
+  except:
+    refs:
+      - master
+      - schedules
+    variables:
+      - $CI_COMMIT_TITLE =~ /.*NOTEST.*/
+  when: delayed
+  start_in: 1 minutes 
+
+
+################################################ Nightly builds #############################################
+
+nw_han_skel 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh nw_han_skel tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)nw_han_skel.*.otc($|,.*)|(^|.*,)otc.*.nw_han_skel($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+
+nw_han_skel 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh nw_han_skel azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)nw_han_skel.*.azure($|,.*)|(^|.*,)azure.*.nw_han_skel($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+
+nw_han_skel 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh nw_han_skel tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)nw_han_skel.*.aws($|,.*)|(^|.*,)aws.*.nw_han_skel($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+
+nw_han_skel 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh nw_han_skel fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)nw_han_skel.*.fci($|,.*)|(^|.*,)fci.*.nw_han_skel($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+
+nw_han_skel 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh nw_han_skel gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)nw_han_skel.*.gcp($|,.*)|(^|.*,)gcp.*.nw_han_skel($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+
+nw_han_skel_two_dsk 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh nw_han_skel_two_dsk gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)nw_han_skel_two_dsk.*.gcp($|,.*)|(^|.*,)gcp.*.nw_han_skel_two_dsk($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+
+########################
+
+syb_skel_single 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_skel_single tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_skel_single.*.otc($|,.*)|(^|.*,)otc.*.syb_skel_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 1 minutes 
+
+syb_skel_single 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_skel_single azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_skel_single.*.azure($|,.*)|(^|.*,)azure.*.syb_skel_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 1 minutes 
+
+syb_skel_single 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_skel_single tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_skel_single.*.aws($|,.*)|(^|.*,)aws.*.syb_skel_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 1 minutes 
+
+syb_skel_single 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_skel_single fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_skel_single.*.fci($|,.*)|(^|.*,)fci.*.syb_skel_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 1 minutes
+
+syb_skel_single 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_skel_single gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_skel_single.*.gcp($|,.*)|(^|.*,)gcp.*.syb_skel_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 1 minutes
+
+########################
+
+syb_skel 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_skel tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_skel.*.otc($|,.*)|(^|.*,)otc.*.syb_skel($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 2 minutes 
+
+syb_skel 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_skel azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_skel.*.azure($|,.*)|(^|.*,)azure.*.syb_skel($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 2 minutes 
+
+syb_skel 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_skel tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_skel.*.aws($|,.*)|(^|.*,)aws.*.syb_skel($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 2 minutes 
+
+syb_skel 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_skel fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_skel.*.fci($|,.*)|(^|.*,)fci.*.syb_skel($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 2 minutes 
+
+syb_skel 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_skel gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_skel.*.gcp($|,.*)|(^|.*,)gcp.*.syb_skel($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 2 minutes
+
+########################
+
+nw_han 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh nw_han tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)nw_han.*.otc($|,.*)|(^|.*,)otc.*.nw_han($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 3 minutes 
+
+nw_han 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh nw_han azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)nw_han.*.azure($|,.*)|(^|.*,)azure.*.nw_han($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 3 minutes 
+
+nw_han 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh nw_han tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)nw_han.*.aws($|,.*)|(^|.*,)aws.*.nw_han($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 3 minutes
+
+nw_han 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh nw_han gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)nw_han.*.gcp($|,.*)|(^|.*,)gcp.*.nw_han($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 3 minutes 
+
+########################
+
+bw_han 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh bw_han tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)bw_han.*.otc($|,.*)|(^|.*,)otc.*.bw_han($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 4 minutes 
+
+bw_han 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh bw_han azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)bw_han.*.azure($|,.*)|(^|.*,)azure.*.bw_han($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 4 minutes 
+
+bw_han 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh bw_han tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)bw_han.*.aws($|,.*)|(^|.*,)aws.*.bw_han($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 4 minutes 
+
+bw_han 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh bw_han fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)bw_han.*.fci($|,.*)|(^|.*,)fci.*.bw_han($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 4 minutes 
+
+bw_han 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh bw_han gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)bw_han.*.gcp($|,.*)|(^|.*,)gcp.*.bw_han($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 4 minutes
+########################
+
+syb 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb.*.otc($|,.*)|(^|.*,)otc.*.syb($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 5 minutes 
+
+syb 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb.*.azure($|,.*)|(^|.*,)azure.*.syb($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 5 minutes 
+
+syb 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb.*.aws($|,.*)|(^|.*,)aws.*.syb($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 5 minutes 
+
+syb 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb.*.fci($|,.*)|(^|.*,)fci.*.syb($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 5 minutes 
+
+syb 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb.*.gcp($|,.*)|(^|.*,)gcp.*.syb($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 5 minutes
+
+########################
+
+syb_single 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_single tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_single.*.otc($|,.*)|(^|.*,)otc.*.syb_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 6 minutes 
+
+syb_single 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_single azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_single.*.azure($|,.*)|(^|.*,)azure.*.syb_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 6 minutes 
+
+syb_single 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_single tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_single.*.aws($|,.*)|(^|.*,)aws.*.syb_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 6 minutes 
+
+syb_single 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_single fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_single.*.fci($|,.*)|(^|.*,)fci.*.syb_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 6 minutes
+
+syb_single 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_single gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_single.*.gcp($|,.*)|(^|.*,)gcp.*.syb_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 6 minutes
+
+########################
+
+ora_skel 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh ora_skel azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)ora_skel.*.azure($|,.*)|(^|.*,)azure.*.ora_skel($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 7 minutes 
+
+ora_skel 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh ora_skel tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)ora_skel.*.aws($|,.*)|(^|.*,)aws.*.ora_skel($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 7 minutes 
+
+########################
+
+ora_skel_single:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh ora_skel_single azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)ora_skel_single.*.azure($|,.*)|(^|.*,)azure.*.ora_skel_single($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 8 minutes 
+
+########################
+
+gs_skel 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh gs_skel tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)gs_skel.*.otc($|,.*)|(^|.*,)otc.*.gs_skel($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 9 minutes 
+
+gs_skel 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh gs_skel azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)gs_skel.*.azure($|,.*)|(^|.*,)azure.*.gs_skel($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 9 minutes 
+
+gs_skel 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh gs_skel tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)gs_skel.*.aws($|,.*)|(^|.*,)aws.*.gs_skel($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 9 minutes 
+
+gs_skel 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh gs_skel fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)gs_skel.*.fci($|,.*)|(^|.*,)fci.*.gs_skel($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 9 minutes 
+
+gs_skel 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh gs_skel gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)gs_skel.*.gcp($|,.*)|(^|.*,)gcp.*.gs_skel($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 9 minutes
+########################
+
+ora_skel_low 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh ora_skel_low tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)ora_skel_low.*.otc($|,.*)|(^|.*,)otc.*.ora_skel_low($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 10 minutes
+
+########################
+
+cn_skel 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh cn_skel tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)cn_skel.*.otc($|,.*)|(^|.*,)otc.*.cn_skel($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 13 minutes 
+
+cn_skel 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh cn_skel azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)cn_skel.*.azure($|,.*)|(^|.*,)azure.*.cn_skel($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 19 minutes 
+
+#cn_skel 3:3:
+#  stage: test
+#  tags:
+#    - dev_runner_tag
+#  script:
+#    -  ./scripts/testcases/test.sh cn_skel tib0301
+#  only:
+#    refs:
+#      - schedules
+#    variables:
+#      - $SCOPE =~ /(^$|(^|.*,)cn_skel.*.aws($|,.*)|(^|.*,)aws.*.cn_skel($|,.*))/s
+#  except:
+#    refs:
+#      - merge_requests
+#    variables:
+#      - $ROLLOUT
+#  when: delayed
+#  start_in: 19 minutes 
+
+####################################
+
+s_han_1909 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_1909 tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_1909.*.otc($|,.*)|(^|.*,)otc.*.s_han_1909($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 14 minutes 
+
+s_han_1909 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_1909 azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_1909.*.azure($|,.*)|(^|.*,)azure.*.s_han_1909($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 14 minutes 
+
+s_han_1909 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_1909 tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_1909.*.aws($|,.*)|(^|.*,)aws.*.s_han_1909($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 14 minutes 
+
+s_han_1909 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_1909 fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_1909.*.fci($|,.*)|(^|.*,)fci.*.s_han_1909($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 14 minutes
+
+s_han_1909 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_1909 gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_1909.*.gcp($|,.*)|(^|.*,)gcp.*.s_han_1909($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 14 minutes
+
+####################################
+
+s_han_2020 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_2020 tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_2020.*.otc($|,.*)|(^|.*,)otc.*.s_han_2020($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 23 minutes 
+
+s_han_2020 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_2020 azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_2020.*.azure($|,.*)|(^|.*,)azure.*.s_han_2020($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 23 minutes 
+
+s_han_2020 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_2020 tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_2020.*.aws($|,.*)|(^|.*,)aws.*.s_han_2020($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 23 minutes 
+
+s_han_2020 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_2020 fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_2020.*.fci($|,.*)|(^|.*,)fci.*.s_han_2020($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 23 minutes
+
+s_han_2020 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_2020 gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_2020.*.gcp($|,.*)|(^|.*,)gcp.*.s_han_2020($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 23 minutes
+
+####################################
+
+s_han_1909_fa 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_1909_fa tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_1909_fa.*.otc($|,.*)|(^|.*,)otc.*.s_han_1909_fa($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 15 minutes 
+
+s_han_1909_fa 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_1909_fa azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_1909_fa.*.azure($|,.*)|(^|.*,)azure.*.s_han_1909_fa($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 15 minutes 
+
+s_han_1909_fa 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_1909_fa tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_1909_fa.*.aws($|,.*)|(^|.*,)aws.*.s_han_1909_fa($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 15 minutes 
+
+s_han_1909_fa 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_1909_fa fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_1909_fa.*.fci($|,.*)|(^|.*,)fci.*.s_han_1909_fa($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 15 minutes
+
+s_han_1909_fa 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_1909_fa gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_1909_fa.*.gcp($|,.*)|(^|.*,)gcp.*.s_han_1909_fa($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 15 minutes
+
+####################################
+
+syb_ides_erp 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_ides_erp tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_ides_erp.*.otc($|,.*)|(^|.*,)otc.*.syb_ides_erp($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 16 minutes 
+
+syb_ides_erp 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_ides_erp azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_ides_erp.*.azure($|,.*)|(^|.*,)azure.*.syb_ides_erp($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 16 minutes 
+
+syb_ides_erp 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_ides_erp tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_ides_erp.*.aws($|,.*)|(^|.*,)aws.*.syb_ides_erp($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 16 minutes
+
+syb_ides_erp 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_ides_erp gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_ides_erp.*.gcp($|,.*)|(^|.*,)gcp.*.syb_ides_erp($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 16 minutes
+
+########################
+
+adobe_ds_1909 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_1909 tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_1909.*.otc($|,.*)|(^|.*,)otc.*.adobe_ds_1909($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 17 minutes 
+
+adobe_ds_1909 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_1909 azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_1909.*.azure($|,.*)|(^|.*,)azure.*.adobe_ds_1909($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 17 minutes 
+
+adobe_ds_1909 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_1909 tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_1909.*.aws($|,.*)|(^|.*,)aws.*.adobe_ds_1909($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 17 minutes 
+
+adobe_ds_1909 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_1909 fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_1909.*.fci($|,.*)|(^|.*,)fci.*.adobe_ds_1909($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 17 minutes
+
+adobe_ds_1909 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_1909 gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_1909.*.gcp($|,.*)|(^|.*,)gcp.*.adobe_ds_1909($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 17 minutes
+
+########################
+
+adobe_ds_1909_single 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_1909_single tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_1909_single.*.otc($|,.*)|(^|.*,)otc.*.adobe_ds_1909_single($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 18 minutes 
+
+adobe_ds_1909_single 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_1909_single azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_1909_single.*.azure($|,.*)|(^|.*,)azure.*.adobe_ds_1909_single($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 18 minutes 
+
+adobe_ds_1909_single 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_1909_single tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_1909_single.*.aws($|,.*)|(^|.*,)aws.*.adobe_ds_1909_single($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 18 minutes 
+
+adobe_ds_1909_single 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_1909_single fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_1909_single.*.fci($|,.*)|(^|.*,)fci.*.adobe_ds_1909_single($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 18 minutes
+
+adobe_ds_1909_single 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_1909_single gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_1909_single.*.gcp($|,.*)|(^|.*,)gcp.*.adobe_ds_1909_single($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 18 minutes
+
+########################
+
+solman_72sr1fps10_abap 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh solman_72sr1fps10_abap tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)solman_72sr1fps10_abap.*.otc($|,.*)|(^|.*,)otc.*.solman_72sr1fps10_abap($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 19 minutes
+
+solman_72sr1fps10_abap 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh solman_72sr1fps10_abap azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)solman_72sr1fps10_abap.*.azure($|,.*)|(^|.*,)azure.*.solman_72sr1fps10_abap($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 19 minutes
+
+solman_72sr1fps10_abap 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh solman_72sr1fps10_abap tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)solman_72sr1fps10_abap.*.aws($|,.*)|(^|.*,)aws.*.solman_72sr1fps10_abap($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 19 minutes
+
+solman_72sr1fps10_abap 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh solman_72sr1fps10_abap gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)solman_72sr1fps10_abap.*.gcp($|,.*)|(^|.*,)gcp.*.solman_72sr1fps10_abap($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 19 minutes
+
+########################
+
+solman_72sr1fps10_java 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh solman_72sr1fps10_java tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)solman_72sr1fps10_java.*.otc($|,.*)|(^|.*,)otc.*.solman_72sr1fps10_java($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 20 minutes
+
+solman_72sr1fps10_java 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh solman_72sr1fps10_java azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)solman_72sr1fps10_java.*.azure($|,.*)|(^|.*,)azure.*.solman_72sr1fps10_java($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 20 minutes
+
+solman_72sr1fps10_java 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh solman_72sr1fps10_java tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)solman_72sr1fps10_java.*.aws($|,.*)|(^|.*,)aws.*.solman_72sr1fps10_java($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 20 minutes
+
+solman_72sr1fps10_java 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh solman_72sr1fps10_java gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)solman_72sr1fps10_java.*.gcp($|,.*)|(^|.*,)gcp.*.solman_72sr1fps10_java($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 20 minutes
+
+########################
+
+web_disp 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh web_disp tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)web_disp.*.otc($|,.*)|(^|.*,)otc.*.web_disp($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 21 minutes
+
+web_disp 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh web_disp azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)web_disp.*.azure($|,.*)|(^|.*,)azure.*.web_disp($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 21 minutes
+
+web_disp 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh web_disp tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)web_disp.*.aws($|,.*)|(^|.*,)aws.*.web_disp($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 21 minutes
+
+web_disp 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh web_disp gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)web_disp.*.gcp($|,.*)|(^|.*,)gcp.*.web_disp($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 21 minutes
+
+########################
+
+gate 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh gate tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)gate.*.otc($|,.*)|(^|.*,)otc.*.gate($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 22 minutes
+
+gate 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh gate azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)gate.*.azure($|,.*)|(^|.*,)azure.*.gate($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 22 minutes
+
+gate 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh gate tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)gate.*.aws($|,.*)|(^|.*,)aws.*.gate($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 22 minutes
+
+gate 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh gate gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)gate.*.gcp($|,.*)|(^|.*,)gcp.*.gate($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 22 minutes
+
+########################
+
+sapr 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh sapr tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)sapr.*.otc($|,.*)|(^|.*,)otc.*.sapr($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 24 minutes
+
+sapr 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh sapr azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)sapr.*.azure($|,.*)|(^|.*,)azure.*.sapr($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 24 minutes
+
+sapr 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh sapr tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)sapr.*.aws($|,.*)|(^|.*,)aws.*.sapr($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 24 minutes
+
+sapr 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh sapr fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)sapr.*.fci($|,.*)|(^|.*,)fci.*.sapr($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 24 minutes
+
+sapr 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh sapr gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)sapr.*.gcp($|,.*)|(^|.*,)gcp.*.sapr($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 24 minutes
+
+########################
+
+business_con 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh business_con tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)business_con.*.otc($|,.*)|(^|.*,)otc.*.business_con($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 27 minutes
+
+business_con 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh business_con azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)business_con.*.azure($|,.*)|(^|.*,)azure.*.business_con($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 27 minutes
+
+business_con 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh business_con tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)business_con.*.aws($|,.*)|(^|.*,)aws.*.business_con($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 27 minutes
+
+business_con 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh business_con fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)business_con.*.fci($|,.*)|(^|.*,)fci.*.business_con($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 24 minutes
+
+
+business_con 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh business_con gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)business_con.*.gcp($|,.*)|(^|.*,)gcp.*.business_con($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 27 minutes
+
+########################
+
+content_ser 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh content_ser tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)content_ser.*.otc($|,.*)|(^|.*,)otc.*.content_ser($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 28 minutes
+
+content_ser 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh content_ser azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)content_ser.*.azure($|,.*)|(^|.*,)azure.*.content_ser($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 28 minutes
+
+content_ser 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh content_ser tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)content_ser.*.aws($|,.*)|(^|.*,)aws.*.content_ser($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 28 minutes
+
+content_ser 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh content_ser fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)content_ser.*.fci($|,.*)|(^|.*,)fci.*.content_ser($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 28 minutes
+
+content_ser 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh content_ser gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)content_ser.*.gcp($|,.*)|(^|.*,)gcp.*.content_ser($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 28 minutes
+
+########################
+
+cloud_con 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh cloud_con tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)cloud_con.*.otc($|,.*)|(^|.*,)otc.*.cloud_con($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 29 minutes
+
+cloud_con 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh cloud_con azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)cloud_con.*.azure($|,.*)|(^|.*,)azure.*.cloud_con($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 29 minutes
+
+cloud_con 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh cloud_con tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)cloud_con.*.aws($|,.*)|(^|.*,)aws.*.cloud_con($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 29 minutes
+
+cloud_con 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh cloud_con fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)cloud_con.*.fci($|,.*)|(^|.*,)fci.*.cloud_con($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 29 minutes
+
+cloud_con 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh cloud_con gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)cloud_con.*.gcp($|,.*)|(^|.*,)gcp.*.cloud_con($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 29 minutes
+
+####################################
+
+s_han_2020_fa_fps02 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_2020_fa_fps02 tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_2020_fa_fps02.*.otc($|,.*)|(^|.*,)otc.*.s_han_2020_fa_fps02($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 30 minutes 
+
+s_han_2020_fa_fps02 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_2020_fa_fps02 azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_2020_fa_fps02.*.azure($|,.*)|(^|.*,)azure.*.s_han_2020_fa_fps02($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 30 minutes 
+
+s_han_2020_fa_fps02 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_2020_fa_fps02 tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_2020_fa_fps02.*.aws($|,.*)|(^|.*,)aws.*.s_han_2020_fa_fps02($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 30 minutes 
+
+s_han_2020_fa_fps02 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_2020_fa_fps02 fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_2020_fa_fps02.*.fci($|,.*)|(^|.*,)fci.*.s_han_2020_fa_fps02($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 30 minutes
+
+s_han_2020_fa_fps02 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh s_han_2020_fa_fps02 gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)s_han_2020_fa_fps02.*.gcp($|,.*)|(^|.*,)gcp.*.s_han_2020_fa_fps02($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 30 minutes
+
+####################################
+
+adobe_ds_2020_fps01 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_2020_fps01 tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_2020_fps01.*.otc($|,.*)|(^|.*,)otc.*.adobe_ds_2020_fps01($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 31 minutes 
+
+adobe_ds_2020_fps01 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_2020_fps01 azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_2020_fps01.*.azure($|,.*)|(^|.*,)azure.*.adobe_ds_2020_fps01($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 31 minutes 
+
+adobe_ds_2020_fps01 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_2020_fps01 tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_2020_fps01.*.aws($|,.*)|(^|.*,)aws.*.adobe_ds_2020_fps01($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 31 minutes 
+
+adobe_ds_2020_fps01 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_2020_fps01 fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_2020_fps01.*.fci($|,.*)|(^|.*,)fci.*.adobe_ds_2020_fps01($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 31 minutes
+
+adobe_ds_2020_fps01 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_2020_fps01 gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_2020_fps01.*.gcp($|,.*)|(^|.*,)gcp.*.adobe_ds_2020_fps01($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 31 minutes
+
+########################
+
+adobe_ds_2020_single_fps01 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_2020_single_fps01 tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_2020_single_fps01.*.otc($|,.*)|(^|.*,)otc.*.adobe_ds_2020_single_fps01($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 32 minutes 
+
+adobe_ds_2020_single_fps01 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_2020_single_fps01 azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_2020_single_fps01.*.azure($|,.*)|(^|.*,)azure.*.adobe_ds_2020_single_fps01($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 32 minutes 
+
+adobe_ds_2020_single_fps01 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_2020_single_fps01 tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_2020_single_fps01.*.aws($|,.*)|(^|.*,)aws.*.adobe_ds_2020_single_fps01($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 32 minutes 
+
+adobe_ds_2020_single_fps01 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_2020_single_fps01 fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_2020_single_fps01.*.fci($|,.*)|(^|.*,)fci.*.adobe_ds_2020_single_fps01($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 32 minutes
+
+adobe_ds_2020_single_fps01 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh adobe_ds_2020_single_fps01 gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)adobe_ds_2020_single_fps01.*.gcp($|,.*)|(^|.*,)gcp.*.adobe_ds_2020_single_fps01($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 32 minutes
+
+########################
+
+syb_nw75sp20 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh syb_nw75sp20 tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_nw75sp20.*.otc($|,.*)|(^|.*,)otc.*.syb_nw75sp20($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+syb_nw75sp20 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh syb_nw75sp20 azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_nw75sp20.*.azure($|,.*)|(^|.*,)azure.*.syb_nw75sp20($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+syb_nw75sp20 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh syb_nw75sp20 tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_nw75sp20.*.aws($|,.*)|(^|.*,)aws.*.syb_nw75sp20($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+syb_nw75sp20 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_nw75sp20 fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_nw75sp20.*.fci($|,.*)|(^|.*,)fci.*.syb_nw75sp20($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+syb_nw75sp20 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh syb_nw75sp20 gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_nw75sp20.*.gcp($|,.*)|(^|.*,)gcp.*.syb_nw75sp20($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+########################
+
+ora_nw75sp20 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh ora_nw75sp20 azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)ora_nw75sp20.*.azure($|,.*)|(^|.*,)azure.*.ora_nw75sp20($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+ora_nw75sp20 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh ora_nw75sp20 tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)ora_nw75sp20.*.aws($|,.*)|(^|.*,)aws.*.ora_nw75sp20($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 7 minutes 
+
+########################
+
+han_nw75sp20 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh han_nw75sp20 tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)han_nw75sp20.*.otc($|,.*)|(^|.*,)otc.*.han_nw75sp20($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+han_nw75sp20 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh han_nw75sp20 azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)han_nw75sp20.*.azure($|,.*)|(^|.*,)azure.*.han_nw75sp20($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+han_nw75sp20 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh han_nw75sp20 tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)han_nw75sp20.*.aws($|,.*)|(^|.*,)aws.*.han_nw75sp20($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+han_nw75sp20 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh han_nw75sp20 fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)han_nw75sp20.*.fci($|,.*)|(^|.*,)fci.*.han_nw75sp20($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+han_nw75sp20 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh han_nw75sp20 gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)han_nw75sp20.*.gcp($|,.*)|(^|.*,)gcp.*.han_nw75sp20($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+########################
+
+syb_erp6ehp8sp16 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh syb_erp6ehp8sp16 tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_erp6ehp8sp16.*.otc($|,.*)|(^|.*,)otc.*.syb_erp6ehp8sp16($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+syb_erp6ehp8sp16 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh syb_erp6ehp8sp16 azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_erp6ehp8sp16.*.azure($|,.*)|(^|.*,)azure.*.syb_erp6ehp8sp16($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+syb_erp6ehp8sp16 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh syb_erp6ehp8sp16 tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_erp6ehp8sp16.*.aws($|,.*)|(^|.*,)aws.*.syb_erp6ehp8sp16($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+syb_erp6ehp8sp16 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_erp6ehp8sp16 fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_erp6ehp8sp16.*.fci($|,.*)|(^|.*,)fci.*.syb_erp6ehp8sp16($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+syb_erp6ehp8sp16 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh syb_erp6ehp8sp16 gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_erp6ehp8sp16.*.gcp($|,.*)|(^|.*,)gcp.*.syb_erp6ehp8sp16($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+########################
+
+syb_erp6ehp8sp16_single 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_erp6ehp8sp16_single tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_erp6ehp8sp16_single.*.otc($|,.*)|(^|.*,)otc.*.syb_erp6ehp8sp16_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes 
+
+syb_erp6ehp8sp16_single 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_erp6ehp8sp16_single azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_erp6ehp8sp16_single.*.azure($|,.*)|(^|.*,)azure.*.syb_erp6ehp8sp16_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes 
+
+syb_erp6ehp8sp16_single 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_erp6ehp8sp16_single tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_erp6ehp8sp16_single.*.aws($|,.*)|(^|.*,)aws.*.syb_erp6ehp8sp16_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes 
+
+syb_erp6ehp8sp16_single 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_erp6ehp8sp16_single fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_erp6ehp8sp16_single.*.fci($|,.*)|(^|.*,)fci.*.syb_erp6ehp8sp16_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+syb_erp6ehp8sp16_single 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_erp6ehp8sp16_single gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_erp6ehp8sp16_single.*.gcp($|,.*)|(^|.*,)gcp.*.syb_erp6ehp8sp16_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+########################
+
+bw_han20sp08 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh bw_han20sp08 tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)bw_han20sp08.*.otc($|,.*)|(^|.*,)otc.*.bw_han20sp08($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 34 minutes 
+
+bw_han20sp08 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh bw_han20sp08 azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)bw_han20sp08.*.azure($|,.*)|(^|.*,)azure.*.bw_han20sp08($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 34 minutes 
+
+bw_han20sp08 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh bw_han20sp08 tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)bw_han20sp08.*.aws($|,.*)|(^|.*,)aws.*.bw_han20sp08($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 34 minutes 
+
+bw_han20sp08 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh bw_han20sp08 fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)bw_han20sp08.*.fci($|,.*)|(^|.*,)fci.*.bw_han20sp08($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 34 minutes 
+
+bw_han20sp08 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh bw_han20sp08 gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)bw_han20sp08.*.gcp($|,.*)|(^|.*,)gcp.*.bw_han20sp08($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 34 minutes 
+
+
+########################
+
+ora_erp60sp16 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh ora_erp60sp16 azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)ora_erp60sp16.*.azure($|,.*)|(^|.*,)azure.*.ora_erp60sp16($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 35 minutes
+
+ora_erp60sp16 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh ora_erp60sp16 tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)ora_erp60sp16.*.aws($|,.*)|(^|.*,)aws.*.ora_erp60sp16($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 35 minutes 
+
+########################
+
+syb_nw75sp20_single 1:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_nw75sp20_single tu10101
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_nw75sp20_single.*.otc($|,.*)|(^|.*,)otc.*.syb_nw75sp20_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 6 minutes 
+
+syb_nw75sp20_single 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_nw75sp20_single azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_nw75sp20_single.*.azure($|,.*)|(^|.*,)azure.*.syb_nw75sp20_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 6 minutes 
+
+syb_nw75sp20_single 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_nw75sp20_single tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_nw75sp20_single.*.aws($|,.*)|(^|.*,)aws.*.syb_nw75sp20_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 6 minutes 
+
+syb_nw75sp20_single 4:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_nw75sp20_single fci0401
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_nw75sp20_single.*.fci($|,.*)|(^|.*,)fci.*.syb_nw75sp20_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 6 minutes
+
+syb_nw75sp20_single 5:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh syb_nw75sp20_single gcp0501
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)syb_nw75sp20_single.*.gcp($|,.*)|(^|.*,)gcp.*.syb_nw75sp20_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 6 minutes
+
+########################
+
+ora_nw75sp20_single 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh ora_nw75sp20_single azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)ora_nw75sp20_single.*.azure($|,.*)|(^|.*,)azure.*.ora_nw75sp20_single($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 33 minutes
+
+ora_nw75sp20_single 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh ora_nw75sp20_single tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)ora_nw75sp20_single.*.aws($|,.*)|(^|.*,)aws.*.ora_nw75sp20_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 7 minutes 
+
+########################
+
+ora_erp60sp16_single 2:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    - ./scripts/testcases/test.sh ora_erp60sp16_single azt9797
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)ora_erp60sp16_single.*.azure($|,.*)|(^|.*,)azure.*.ora_erp60sp16_single($|,.*))/s
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 26 minutes
+
+ora_erp60sp16_single 3:3:
+  stage: test
+  tags:
+    - dev_runner_tag
+  script:
+    -  ./scripts/testcases/test.sh ora_erp60sp16_single tib0301
+  only:
+    refs:
+      - schedules
+    variables:
+      - $SCOPE =~ /(^$|(^|.*,)ora_erp60sp16_single.*.aws($|,.*)|(^|.*,)aws.*.ora_erp60sp16_single($|,.*))/
+  except:
+    refs:
+      - merge_requests
+    variables:
+      - $ROLLOUT
+  when: delayed
+  start_in: 35 minutes 
